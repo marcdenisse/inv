@@ -528,21 +528,6 @@
 <body>
 
 <!-- ══════════════════════════════════════════════
-     NETLIFY FORMS — formulario oculto para detección en build
-══════════════════════════════════════════════ -->
-<form name="rsvp" netlify netlify-honeypot="bot-field" hidden>
-  <input name="bot-field">
-  <input name="timestamp">
-  <input name="invitadoId">
-  <input name="nombre">
-  <input name="asistencia">
-  <input name="personas">
-  <input name="bus">
-  <input name="alergias">
-  <input name="mensaje">
-</form>
-
-<!-- ══════════════════════════════════════════════
      ENVELOPE SCREEN
 ══════════════════════════════════════════════ -->
 <div id="envelope-screen">
@@ -907,8 +892,9 @@ const INVITADOS = {
 };
 
 /* ================================================================
-   NETLIFY FORMS — RSVP
+   WEB3FORMS — RSVP
 ================================================================ */
+const W3F_KEY = "098461d4-4095-4230-b15d-7b22fbe7758a";
 
 
 /* ────────────────────────────────────────────────────────────────
@@ -1029,17 +1015,14 @@ async function sendRSVP() {
   };
 
   try {
-    // Enviar a Netlify Forms
-    const formData = new URLSearchParams();
-    formData.append('form-name', 'rsvp');
-    formData.append('bot-field', '');
-    Object.entries(payload).forEach(([k, v]) => formData.append(k, v));
-
-    await fetch('/', {
+    // Enviar a Web3Forms
+    const res = await fetch('https://api.web3forms.com/submit', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData.toString()
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ access_key: W3F_KEY, subject: `RSVP Boda — ${payload.nombre} (${payload.asistencia})`, ...payload })
     });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
 
     document.getElementById('rsvpForm').style.display = 'none';
     const s = document.getElementById('rsvpSuccess');

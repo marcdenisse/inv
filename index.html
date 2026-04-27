@@ -26,10 +26,12 @@
       --text-dark:    #2A2821;
       --text-mid:     #5A5548;
       --text-light:   #9A9389;
-      --serif:        'Playfair Display', 'Cormorant Garamond', Georgia, serif;
-      --serif-italic: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
-      --serif-soft:   'Cormorant Garamond', Georgia, serif;
-      --serif-num:    'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+      /* Sólo 2 familias en uso normal: Playfair Display (serif) + Inter (sans).
+         Cormorant Garamond queda RESERVADO al símbolo "&" por su glifo elegante. */
+      --serif:        'Playfair Display', Georgia, serif;
+      --serif-italic: 'Playfair Display', Georgia, serif;
+      --serif-soft:   'Playfair Display', Georgia, serif;
+      --serif-num:    'Playfair Display', Georgia, serif;
       --sans:         'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -97,10 +99,18 @@
     #d6to9 {
       display: inline-block;
       transform-origin: 50% 50%;
-      transition: transform 1.8s cubic-bezier(0.86, 0, 0.07, 1),
-                  color 1.8s ease;
+      transition: transform 1.8s cubic-bezier(0.86, 0, 0.07, 1);
     }
-    #d6to9.flip { transform: rotate(180deg); color: var(--sage); }
+    #d6to9.flip { transform: rotate(180deg); }
+    /* Estado final: toda la fecha pasa a verde */
+    .intro-stage.greened,
+    .intro-stage.greened .digit,
+    .intro-stage.greened .sep,
+    .intro-stage.greened .year-roll {
+      color: var(--sage-dark);
+      transition: color 1.0s ease;
+    }
+    .intro-stage.greened .sep { opacity: 0.85; }
 
     /* the year roll: 2016 → 2026 */
     .year-roll {
@@ -120,18 +130,6 @@
     }
     .year-roll.go .roller { transform: translateY(-1em); }
 
-    .intro-tag {
-      margin-top: 38px;
-      font-family: var(--sans);
-      font-size: 11px;
-      letter-spacing: 6px;
-      text-transform: uppercase;
-      color: var(--text-light);
-      opacity: 0;
-      transition: opacity 0.8s ease 0.3s;
-    }
-    .intro-tag.visible { opacity: 1; }
-    .intro-tag .plus10 { color: var(--sage); font-weight: 500; }
 
 
     /* ════════════════════════════════════════════════════════════════
@@ -366,11 +364,15 @@
       letter-spacing: -0.01em;
     }
     .names-and {
-      display: block; font-style: italic;
-      color: var(--gold); font-size: 0.55em;
-      margin: 4px 0;
-      font-family: var(--serif-soft);
+      display: block;
+      font-style: italic;
+      color: var(--gold);
+      font-size: 0.85em;
+      margin: -0.05em 0 0.02em;
+      font-family: 'Cormorant Garamond', Georgia, serif;
       font-weight: 400;
+      line-height: 0.9;
+      letter-spacing: -0.02em;
     }
 
     .ornament {
@@ -389,9 +391,23 @@
 
     .hero-date {
       font-family: var(--serif);
-      font-size: 26px; font-weight: 300;
+      font-size: 26px; font-weight: 400;
       letter-spacing: 8px; text-transform: uppercase;
       color: var(--text-mid);
+    }
+    .hero-date .hd-dot { color: var(--gold); margin: 0 4px; }
+    /* En móvil: cada parte en su propia línea, centrada y compacta */
+    @media(max-width:560px){
+      .hero { padding: 56px 22px 100px; }
+      .hero-date {
+        display: flex; flex-direction: column; align-items: center;
+        gap: 4px; line-height: 1.1; letter-spacing: 6px;
+        font-size: 22px;
+      }
+      .hero-date .hd-dot { display: none; }
+      .hero-date .hd-part { display: block; }
+      .hero-venue { margin-top: 18px; }
+      .scroll-cue { bottom: 22px; }
     }
     .hero-venue {
       margin-top: 14px; font-size: 11px;
@@ -443,9 +459,10 @@
       letter-spacing: -0.005em;
     }
     .sec-title em {
-      font-style: italic; color: var(--sage-dark);
-      font-family: var(--serif);
-      font-weight: 500;
+      font-style: normal;
+      color: var(--sage-dark);
+      font-family: inherit;
+      font-weight: inherit;
     }
     .sec-body {
       font-size: 16px; line-height: 1.95;
@@ -644,14 +661,9 @@
       overflow: hidden;
     }
     .gallery-header {
-      max-width: 720px; margin: 0 auto 56px;
+      max-width: 720px; margin: 0 auto 48px;
       padding: 0 28px;
-      text-align: center;
-    }
-    .gallery-header .sec-label { justify-content: center; }
-    .gallery-header .sec-label::before {
-      content: ''; flex: 1; height: 1px;
-      background: linear-gradient(to left, var(--gold-light), transparent);
+      text-align: left;
     }
 
     /* Featured (la principal: 2016.jpg) */
@@ -676,26 +688,38 @@
       position: relative;
       overflow: hidden;
       border-radius: 6px;
-      background: var(--cream-mid);
+      /* Fondo oscuro: si la imagen tarda en cargar, no se ve flash blanco */
+      background: #2A2821;
       box-shadow: 0 12px 30px rgba(42,40,33,0.10);
       break-inside: avoid;
       margin-bottom: 14px;
       opacity: 0;
-      transform: translateY(34px);
+      transform: translate3d(0, 30px, 0);
       transition:
         opacity 0.9s cubic-bezier(0.25,0.1,0.25,1),
         transform 0.9s cubic-bezier(0.25,0.1,0.25,1);
       page-break-inside: avoid;
       -webkit-column-break-inside: avoid;
+      /* Aceleración hardware en móvil — evita el parpadeo */
+      will-change: opacity, transform;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      -webkit-transform-style: preserve-3d;
+      transform-style: preserve-3d;
     }
-    .gphoto.in { opacity: 1; transform: translateY(0); }
+    .gphoto.in { opacity: 1; transform: translate3d(0, 0, 0); }
     .gphoto img {
       width: 100%;
       height: auto;
       display: block;
-      transition: transform 1.4s ease;
+      opacity: 0;
+      transition: opacity 0.6s ease, transform 1.4s ease;
+      /* Misma aceleración */
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
     }
-    .gphoto:hover img { transform: scale(1.04); }
+    .gphoto img.loaded { opacity: 1; }
+    .gphoto:hover img.loaded { transform: scale(1.04); }
     .gphoto::after {
       content: '';
       position: absolute; inset: 0;
@@ -705,18 +729,25 @@
     }
     .gphoto:hover::after { opacity: 1; }
     .gphoto-caption {
-      position: absolute; left: 16px; bottom: 14px;
-      color: rgba(255,255,255,0.95);
-      font-family: var(--serif-soft);
-      font-style: italic;
+      position: absolute; left: 12px; bottom: 12px;
+      color: rgba(255,255,255,0.98);
+      font-family: var(--serif);
+      font-style: normal;
+      font-weight: 400;
       font-size: 14px;
       letter-spacing: 0.3px;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-      opacity: 0; transform: translateY(6px);
-      transition: opacity 0.4s ease 0.05s, transform 0.4s ease 0.05s;
+      padding: 3px 8px;
+      border-radius: 3px;
+      background: rgba(20,20,20,0.45);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      text-shadow:
+        0 1px 2px rgba(0,0,0,0.6),
+        0 0 1px rgba(0,0,0,0.4);
+      opacity: 1;
       z-index: 2; pointer-events: none;
     }
-    .gphoto:hover .gphoto-caption { opacity: 1; transform: translateY(0); }
+    .gphoto:hover .gphoto-caption { background: rgba(20,20,20,0.6); }
 
     /* Foto destacada — un poco más grande y con sombra más marcada */
     .gphoto.featured {
@@ -726,7 +757,7 @@
 
     @media(max-width:480px){
       .gphoto { margin-bottom: 8px; border-radius: 4px; }
-      .gphoto-caption { opacity: 1; transform: none; font-size: 12px; left: 10px; bottom: 8px; }
+      .gphoto-caption { font-size: 11px; left: 8px; bottom: 8px; padding: 2px 6px; letter-spacing: 0.2px; }
     }
 
     /* ════════════════════════════════════════════════════════════════
@@ -814,9 +845,13 @@
     ════════════════════════════════════════════════════════════════ */
     .dress-section {
       background: var(--sage-deep);
-      padding: 100px 24px;
+      padding: 60px 24px;
       position: relative; overflow: hidden;
     }
+    .dress-inner .sec-label { margin-bottom: 18px; }
+    .dress-inner .sec-title { margin-bottom: 18px; }
+    .dress-inner .sec-body { font-size: 15px; line-height: 1.75; }
+    .dress-inner .sec-body p + p { margin-top: 10px; }
     .dress-section::before {
       content: '';
       position: absolute; inset: 0;
@@ -836,8 +871,9 @@
       display: flex;
       flex-wrap: nowrap;
       justify-content: space-between;
-      gap: 12px;
-      margin-top: 40px;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 28px;
       width: 100%;
     }
     .swatch {
@@ -846,34 +882,44 @@
       min-width: 0;
     }
     .swatch-dot {
-      width: clamp(28px, 6vw, 52px);
-      height: clamp(28px, 6vw, 52px);
+      width: clamp(30px, 6vw, 52px);
+      height: clamp(30px, 6vw, 52px);
       border-radius: 50%;
       border: 1.5px solid rgba(255,255,255,0.12);
       box-shadow: 0 4px 14px rgba(0,0,0,0.18);
       flex-shrink: 0;
     }
     .swatch-name {
-      font-size: clamp(8px, 1.6vw, 10px);
-      letter-spacing: 0.4px;
-      color: rgba(247,242,233,0.6);
+      font-size: clamp(8.5px, 1.6vw, 10px);
+      letter-spacing: 0.3px;
+      color: rgba(247,242,233,0.65);
       text-align: center;
-      line-height: 1.25;
+      line-height: 1.2;
       width: 100%;
-      word-break: break-word;
+      hyphens: none;
+      -webkit-hyphens: none;
+      word-break: keep-all;
+      overflow-wrap: normal;
     }
-    @media(max-width:480px){
-      .swatches { gap: 6px; margin-top: 32px; }
+    @media(max-width:560px){
+      .dress-section { padding: 50px 14px; }
+      .swatches { gap: 5px; margin-top: 28px; }
+      .swatch-name { font-size: 8px; letter-spacing: 0.1px; line-height: 1.18; }
+    }
+    @media(max-width:380px){
+      .dress-section { padding: 44px 10px; }
+      .swatches { gap: 3px; }
+      .swatch-name { font-size: 7px; line-height: 1.15; letter-spacing: 0; }
     }
 
     .bride-note {
-      margin-top: 40px;
+      margin-top: 24px;
       background: rgba(247,242,233,0.08);
       border: 1px solid rgba(247,242,233,0.20);
       border-left: 3px solid var(--gold-light);
       border-radius: 4px;
-      padding: 26px 30px;
-      display: flex; gap: 18px; align-items: flex-start;
+      padding: 18px 22px;
+      display: flex; gap: 14px; align-items: flex-start;
     }
     .bride-note-icon { font-size: 24px; flex-shrink: 0; line-height: 1.4; }
     .bride-note-text {
@@ -900,13 +946,11 @@
     }
     .gift-inner {
       max-width: 600px; margin: 0 auto;
-      text-align: center;
+      text-align: left;
     }
-    .gift-inner .sec-label { justify-content: center; }
-    .gift-inner .sec-label::before {
-      content: ''; flex: 1; height: 1px;
-      background: linear-gradient(to left, var(--gold-light), transparent);
-    }
+    .gift-inner .gift-quote,
+    .gift-inner .gift-body,
+    .gift-inner .gift-card { text-align: center; }
     .gift-quote {
       font-family: var(--serif-italic);
       font-style: italic;
@@ -1119,9 +1163,6 @@
     <span class="digit">6</span>
   </div>
 
-  <p class="intro-tag" id="introTag">
-    <span class="plus10">+ 10 años juntos</span>
-  </p>
 </div>
 
 
@@ -1329,7 +1370,9 @@
           <div class="orn-diamond"></div>
           <div class="orn-line r"></div>
         </div>
-        <p class="hero-date">19 · Diciembre · 2026</p>
+        <p class="hero-date">
+          <span class="hd-part">19</span><span class="hd-dot"> · </span><span class="hd-part">Diciembre</span><span class="hd-dot"> · </span><span class="hd-part">2026</span>
+        </p>
         <p class="hero-venue">Mas Llombart · Sant Fost de Campsentelles · Barcelona</p>
       </div>
 
@@ -1349,8 +1392,6 @@
         <p class="verse-cite" id="bibleCite">— Cantares 6:3</p>
       </div>
     </section>
-
-    <div class="full-rule"></div>
 
     <!-- ── NUESTRA HISTORIA ───────────────────────────────────── -->
     <section class="section-wrap story-section">
@@ -1398,22 +1439,6 @@
       </div>
     </section>
 
-    <!-- ── PHOTO GRID ─────────────────────────────────────────── -->
-    <section class="gallery-section">
-      <div class="gallery-header fi">
-        <p class="sec-label">Momentos</p>
-        <h2 class="sec-title">Una década <em>juntos</em></h2>
-      </div>
-
-      <!-- Foto destacada (la principal — un poco más grande) -->
-      <div class="gallery-featured" id="galleryFeatured"></div>
-
-      <!-- Masonry: el resto de fotos, con aspect ratio natural (sin recortes) -->
-      <div class="gallery-masonry" id="galleryMasonry"></div>
-    </section>
-
-    <div class="full-rule"></div>
-
     <!-- ── DETALLES DEL DÍA ───────────────────────────────────── -->
     <section class="section-wrap">
       <p class="sec-label fi">El gran día</p>
@@ -1450,14 +1475,12 @@
       </div>
     </section>
 
-    <div class="full-rule"></div>
-
     <!-- ── UBICACIÓN ──────────────────────────────────────────── -->
     <section class="section-wrap">
       <p class="sec-label fi">Ubicación</p>
       <h2 class="sec-title fi delay-1">Cómo <em>llegar</em></h2>
       <p class="sec-body fi delay-2">
-        Mas Llombart cuenta con aparcamiento privado para todos los invitados. Si preferís venir sin coche y disfrutar la noche con tranquilidad, organizamos autobús de ida y vuelta desde Barcelona.
+        Mas Llombart cuenta con aparcamiento privado para todos los invitados. Si preferís venir sin coche y disfrutar la noche con tranquilidad, organizamos autocar de ida y vuelta desde Barcelona.
       </p>
 
       <p class="address-line fi delay-2">
@@ -1467,7 +1490,7 @@
       <div class="transport-box fi delay-3">
         <div class="transport-icon">🚌</div>
         <div class="transport-text">
-          <strong>Bus gratuito desde Barcelona</strong><br>
+          <strong>Autocar gratuito desde Barcelona</strong><br>
           Salida desde <strong>Estación Fabra i Puig</strong> (Metro L1) · Hora de salida por confirmar.<br>
           Regreso al finalizar la fiesta. Indicad en el RSVP si necesitáis plaza.
         </div>
@@ -1492,7 +1515,7 @@
         <p class="sec-label fi">Dress Code</p>
         <h2 class="sec-title fi delay-1">Elegancia <em>natural</em></h2>
         <div class="sec-body fi delay-2">
-          <p>Nos encantaría que nos acompañaras con un estilo <strong>clásico, elegante y formal</strong>, acorde a la ocasión.</p>
+          <p>Nos encantaría que nos acompañaras con un estilo <strong>elegante y formal</strong>, acorde a la ocasión.</p>
           <p>La celebración comenzará de día y se alargará hasta la noche, por lo que te animamos a elegir un look <strong>versátil y sofisticado</strong>, adaptado a ambos momentos y a la temporada.</p>
           <p>Lo más importante: que te sientas cómodo/a y disfrutes con nosotros de este día tan especial.</p>
         </div>
@@ -1519,7 +1542,7 @@
           </div>
           <div class="swatch">
             <div class="swatch-dot" style="background:#4A5940;"></div>
-            <span class="swatch-name">Verde bosque</span>
+            <span class="swatch-name">Verde<br>bosque</span>
           </div>
           <div class="swatch">
             <div class="swatch-dot" style="background:#5C2E2E;"></div>
@@ -1527,11 +1550,11 @@
           </div>
           <div class="swatch">
             <div class="swatch-dot" style="background:#1F3A5F;"></div>
-            <span class="swatch-name">Azul noche</span>
+            <span class="swatch-name">Azul<br>noche</span>
           </div>
           <div class="swatch">
             <div class="swatch-dot" style="background:#3D2418;"></div>
-            <span class="swatch-name">Marrón chocolate</span>
+            <span class="swatch-name">Marrón<br>chocolate</span>
           </div>
           <div class="swatch">
             <div class="swatch-dot" style="background:#2C2821;"></div>
@@ -1540,12 +1563,27 @@
         </div>
       </div>
     </div>
+    <!-- ── PHOTO GRID ─────────────────────────────────────────── -->
+    <section class="gallery-section">
+      <div class="gallery-header fi">
+        <p class="sec-label">Momentos</p>
+        <h2 class="sec-title">Una década <em>juntos</em></h2>
+      </div>
+
+      <!-- Foto destacada (la principal — un poco más grande) -->
+      <div class="gallery-featured" id="galleryFeatured"></div>
+
+      <!-- Masonry: el resto de fotos, con aspect ratio natural (sin recortes) -->
+      <div class="gallery-masonry" id="galleryMasonry"></div>
+    </section>
+
 
     <!-- ── REGALOS ────────────────────────────────────────────── -->
     <div class="gift-section">
       <div class="gift-inner">
         <p class="sec-label fi">Un detalle</p>
-        <p class="gift-quote fi delay-1">
+        <h2 class="sec-title fi delay-1" style="text-align:center; margin-bottom:18px;">Vuestra <em>presencia</em></h2>
+        <p class="gift-quote fi delay-2">
           “Vuestra presencia es nuestro mejor regalo.”
         </p>
         <p class="gift-body fi delay-2">
@@ -1605,10 +1643,10 @@
           </div>
 
           <div class="form-group" id="grp-bus" style="display:none;">
-            <label class="form-lbl" for="inp-bus">¿Necesitáis plaza en el autobús?</label>
+            <label class="form-lbl" for="inp-bus" id="lbl-bus">¿Necesitáis plaza en el autocar?</label>
             <select class="form-select" id="inp-bus">
-              <option value="No">No, venimos en coche</option>
-              <option value="Sí">Sí, queremos autobús</option>
+              <option value="No" id="opt-bus-no">No, venimos en coche</option>
+              <option value="Sí" id="opt-bus-yes">Sí, queremos autocar</option>
             </select>
           </div>
 
@@ -1686,16 +1724,16 @@ const PHOTO_FEATURED = {
 };
 
 const PHOTOS = [
-  { src: "barcelona2.jpeg" },
-  { src: "montaña.jpeg"},
-  { src: "roma.jpg"},
-  { src: "barcelona.jpg"},
-  { src: "lagodicomo.jpeg"},
-  { src: "2016-2.jpeg"},
-  { src: "dublin.jpg"},
-  { src: "andorra.jpeg"},
-  { src: "londres.jpg"},
-  { src: "mar.jpg"}
+  { src: "barcelona2.jpeg", caption: "Barcelona, nuestra casa" },
+  { src: "montaña.jpeg",    caption: "Nos encanta la montaña" },
+  { src: "roma.jpg",        caption: "Roma, la dolce vita" },
+  { src: "barcelona.jpg",   caption: "Nuestros inicios" },
+  { src: "lagodicomo.jpeg", caption: "Lago di Como, nuestro lugar especial" },
+  { src: "2016-2.jpeg",     caption: "Una fugaz amistad" },
+  { src: "dublin.jpg",      caption: "Dublín, nuestro segundo hogar" },
+  { src: "andorra.jpeg",    caption: "Esquiando en Andorra" },
+  { src: "londres.jpg",     caption: "Londres entre flores" },
+  { src: "mar.jpg",         caption: "Mar abierto, horizonte infinito"}
 ];
 
 /* ════════════════════════════════════════════════════════════════
@@ -1720,24 +1758,27 @@ function runIntro() {
     document.getElementById('d6to9').classList.add('flip');
   }, 2200);
 
-  // Paso 2 (a los 5.0s): el año 2016 → 2026 con roll, y aparece el tag "+10 años"
+  // Paso 2 (a los 5.0s): el año 2016 → 2026 con roll
   //   (han pasado ~1.6s desde la rotación, suficiente para asimilar 19/12/2016)
   setTimeout(() => {
     document.getElementById('yearRoll').classList.add('go');
-    document.getElementById('introTag').classList.add('visible');
   }, 5000);
 
-  // Paso 3 (a los 9.0s): fade out → mostrar sobre
-  //   (han pasado ~4s desde el roll, dejando ver bien 19/12/2026 + el tag)
+  // Paso 3 (a los 7.5s): toda la fecha pasa a verde
+  setTimeout(() => {
+    document.getElementById('introDate').classList.add('greened');
+  }, 7500);
+
+  // Paso 4 (a los 9.5s): fade out → mostrar sobre
   setTimeout(() => {
     document.getElementById('intro-screen').classList.add('fade-out');
     document.getElementById('envelope-screen').classList.add('in');
-  }, 9000);
+  }, 9500);
 
   // Quitar del DOM la intro
   setTimeout(() => {
     document.getElementById('intro-screen').style.display = 'none';
-  }, 10200);
+  }, 10700);
 }
 
 
@@ -1784,6 +1825,17 @@ if (guest) {
   document.getElementById('seatsNames').textContent = guest.personas.join(' · ');
   document.getElementById('inp-nombre').value = guest.nombres;
 
+  // Pregunta del autocar: singular vs plural
+  if (guest.asientos === 1) {
+    document.getElementById('lbl-bus').textContent = '¿Necesitas plaza en el autocar?';
+    document.getElementById('opt-bus-no').textContent  = 'No, vengo en coche';
+    document.getElementById('opt-bus-yes').textContent = 'Sí, quiero autocar';
+  } else {
+    document.getElementById('lbl-bus').textContent = '¿Necesitáis plaza en el autocar?';
+    document.getElementById('opt-bus-no').textContent  = 'No, venimos en coche';
+    document.getElementById('opt-bus-yes').textContent = 'Sí, queremos autocar';
+  }
+
   // Singular vs plural en la invitación personal
   const inviteEl = document.getElementById('personalInvite');
   if (guest.asientos > 1) {
@@ -1798,7 +1850,7 @@ if (guest) {
   for (let i = 1; i <= guest.asientos; i++) {
     const o = document.createElement('option');
     o.value = i;
-    o.textContent = i === 1 ? 'Solo yo (1 persona)' : `${i} personas`;
+    o.textContent = i === 1 ? '1 persona' : `${i} personas`;
     if (i === guest.asientos) o.selected = true;
     sel.appendChild(o);
   }
@@ -1879,30 +1931,46 @@ function buildGallery() {
   featuredWrap.innerHTML = '';
   masonryWrap.innerHTML  = '';
 
-  // Foto destacada (2016.jpg)
+  // Helper que añade .loaded a la imagen cuando termina de cargar
+  // (evita que se vea blanco mientras descarga, sobre todo en móvil)
+  const attachLoadHandler = (cell) => {
+    const img = cell.querySelector('img');
+    if (!img) return;
+    if (img.complete && img.naturalWidth > 0) {
+      img.classList.add('loaded');
+    } else {
+      img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+      img.addEventListener('error', () => {
+        img.style.opacity = 0.35;
+        cell.style.background = 'var(--cream-mid)';
+      }, { once: true });
+    }
+  };
+
+  // Foto destacada (2016.jpeg)
   const fcell = document.createElement('div');
   fcell.className = 'gphoto featured';
   fcell.innerHTML = `
-    <img src="${PHOTO_FEATURED.src}" alt="${PHOTO_FEATURED.caption}" loading="lazy"
-         onerror="this.style.opacity=0.35; this.parentElement.style.background='var(--cream-mid)';">
+    <img src="${PHOTO_FEATURED.src}" alt="${PHOTO_FEATURED.caption}" loading="eager">
     <div class="gphoto-caption">${PHOTO_FEATURED.caption}</div>
   `;
   featuredWrap.appendChild(fcell);
+  attachLoadHandler(fcell);
 
   // Resto en masonry — el orden del array es el orden visual
   PHOTOS.forEach((p, i) => {
     const cell = document.createElement('div');
     cell.className = 'gphoto';
-    cell.style.transitionDelay = (i * 90) + 'ms';
+    cell.style.transitionDelay = (i * 70) + 'ms';
     cell.innerHTML = `
-      <img src="${p.src}" alt="${p.caption}" loading="lazy"
-           onerror="this.style.opacity=0.35; this.parentElement.style.background='var(--cream-mid)';">
+      <img src="${p.src}" alt="${p.caption}" loading="lazy">
       <div class="gphoto-caption">${p.caption}</div>
     `;
     masonryWrap.appendChild(cell);
+    attachLoadHandler(cell);
   });
 
-  // Observer para revelar fotos al hacer scroll
+  // Observer para revelar fotos al hacer scroll (sólo una vez por foto)
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
       if (e.isIntersecting) {
@@ -1910,7 +1978,7 @@ function buildGallery() {
         obs.unobserve(e.target);
       }
     });
-  }, { threshold: 0.10, rootMargin: '0px 0px -50px 0px' });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
   document.querySelectorAll('.gphoto').forEach(el => obs.observe(el));
 }
 

@@ -118,6 +118,13 @@
     #d6to9.flip {
       transform: translateY(0.10em) rotate(180deg);
     }
+    /* En móvil el optical sizing de Playfair escala ligeramente diferente
+       y 0.10em sobre-compensa: el 9 quedaría más bajo que el 1 */
+    @media(max-width:560px){
+      #d6to9.flip {
+        transform: translateY(0.04em) rotate(180deg);
+      }
+    }
 
     /* Estado final: toda la fecha pasa a verde — TODOS al mismo tiempo */
     .intro-stage.greened,
@@ -1964,26 +1971,62 @@ function buildGallery() {
   masonryWrap.innerHTML  = '';
 
   // Helper que añade .loaded a la imagen cuando termina de cargar
-  // (evita que se vea blanco mientras descarga, sobre todo en móvil)
+  // (evita que se vea blanco mientras descarga, sobre todo en móvil).
+  // Si la carga falla (típico en iOS Safari con caché viejo o redes lentas),
+  // hace UN reintento automático con cache-buster antes de mostrar fallback.
   const attachLoadHandler = (cell) => {
     const img = cell.querySelector('img');
     if (!img) return;
-    if (img.complete && img.naturalWidth > 0) {
+
+    const onLoaded = () => {
       img.classList.add('loaded');
-    } else {
-      img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
-      img.addEventListener('error', () => {
-        img.style.opacity = 0.35;
-        cell.style.background = 'var(--cream-mid)';
-      }, { once: true });
+      // Damos altura mínima a la celda mientras la imagen no se haya
+      // dimensionado para evitar que el masonry colapse.
+      cell.style.minHeight = '';
+    };
+
+    if (img.complete && img.naturalWidth > 0) {
+      onLoaded();
+      return;
     }
+
+    // Reservar altura para que la celda no desaparezca antes de cargar
+    cell.style.minHeight = '180px';
+
+    let retried = false;
+    img.addEventListener('load', onLoaded, { once: true });
+    img.addEventListener('error', function onErr() {
+      if (!retried) {
+        retried = true;
+        // Reintento con cache-buster
+        const orig = img.getAttribute('src');
+        img.src = orig + (orig.includes('?') ? '&' : '?') + 'r=' + Date.now();
+        img.addEventListener('load', onLoaded, { once: true });
+        img.addEventListener('error', () => {
+          // Fallback final: dejar la celda con caption + fondo
+          img.style.display = 'none';
+          cell.style.background = 'var(--cream-mid)';
+          cell.style.minHeight = '160px';
+          const cap = cell.querySelector('.gphoto-caption');
+          if (cap) {
+            cap.style.color = 'var(--text-mid)';
+            cap.style.background = 'rgba(255,255,255,0.7)';
+            cap.style.textShadow = 'none';
+          }
+        }, { once: true });
+      }
+    }, { once: true });
   };
+
+  // Codifica caracteres no-ASCII (ej. ñ en "montaña.jpeg") porque iOS Safari
+  // es estricto con URLs sin codificar y puede fallar al cargar la imagen.
+  const safeUrl = (s) => s.split('/').map(p => encodeURIComponent(p)).join('/');
 
   // Foto destacada (2016.jpeg)
   const fcell = document.createElement('div');
   fcell.className = 'gphoto featured';
   fcell.innerHTML = `
-    <img src="${PHOTO_FEATURED.src}" alt="${PHOTO_FEATURED.caption}" loading="eager">
+    <img src="${safeUrl(PHOTO_FEATURED.src)}" alt="${PHOTO_FEATURED.caption}" loading="eager">
     <div class="gphoto-caption">${PHOTO_FEATURED.caption}</div>
   `;
   featuredWrap.appendChild(fcell);
@@ -1995,7 +2038,7 @@ function buildGallery() {
     cell.className = 'gphoto';
     cell.style.transitionDelay = (i * 70) + 'ms';
     cell.innerHTML = `
-      <img src="${p.src}" alt="${p.caption}" loading="lazy">
+      <img src="${safeUrl(p.src)}" alt="${p.caption}" loading="lazy">
       <div class="gphoto-caption">${p.caption}</div>
     `;
     masonryWrap.appendChild(cell);

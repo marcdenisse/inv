@@ -734,12 +734,13 @@
         transform 0.9s cubic-bezier(0.25,0.1,0.25,1);
       page-break-inside: avoid;
       -webkit-column-break-inside: avoid;
-      /* Aceleración hardware en móvil — evita el parpadeo */
-      will-change: opacity, transform;
+      /* NOTA: NO usar will-change permanente aquí. iOS Safari aliena
+         la imagen interna en su propia capa GPU y, cuando determina
+         que no es "visible", la descarta — causa que algunas fotos
+         (típicamente la última cargada) desaparezcan del DOM rendering
+         hasta que un toque fuerce un repaint. */
       -webkit-backface-visibility: hidden;
       backface-visibility: hidden;
-      -webkit-transform-style: preserve-3d;
-      transform-style: preserve-3d;
     }
     .gphoto.in { opacity: 1; transform: translate3d(0, 0, 0); }
     .gphoto img {
@@ -748,12 +749,16 @@
       display: block;
       opacity: 0;
       transition: opacity 0.6s ease, transform 1.4s ease;
-      /* Misma aceleración */
+      /* Damos a cada imagen su propia capa de composición estable
+         (translate3d en lugar de will-change) — más liviano y no se
+         descarta en iOS Safari */
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
       -webkit-backface-visibility: hidden;
       backface-visibility: hidden;
     }
     .gphoto img.loaded { opacity: 1; }
-    .gphoto:hover img.loaded { transform: scale(1.04); }
+    .gphoto:hover img.loaded { transform: translateZ(0) scale(1.04); }
     .gphoto::after {
       content: '';
       position: absolute; inset: 0;
@@ -1969,52 +1974,57 @@ function buildGallery() {
   featuredWrap.innerHTML = '';
   masonryWrap.innerHTML  = '';
 
-  // Helper que añade .loaded a la imagen cuando termina de cargar
-  // (evita que se vea blanco mientras descarga, sobre todo en móvil).
-  // Si la carga falla (típico en iOS Safari con caché viejo o redes lentas),
-  // hace UN reintento automático con cache-buster antes de mostrar fallback.
+  // Helper de carga robusto:
+  //  1) Espera a que la imagen esté DESCODIFICADA (decode API) — clave en
+  //     iOS Safari: si solo escuchamos 'load' la imagen puede estar bajada
+  //     pero aún no decodificada en GPU, y Safari la descarta.
+  //  2) Reintenta una vez con cache-buster si falla la carga.
+  //  3) Fallback estético si todo falla.
   const attachLoadHandler = (cell) => {
     const img = cell.querySelector('img');
     if (!img) return;
 
-    const onLoaded = () => {
+    const reveal = () => {
       img.classList.add('loaded');
-      // Damos altura mínima a la celda mientras la imagen no se haya
-      // dimensionado para evitar que el masonry colapse.
       cell.style.minHeight = '';
     };
 
-    if (img.complete && img.naturalWidth > 0) {
-      onLoaded();
-      return;
+    // decode() devuelve una Promise que resuelve cuando la imagen está
+    // totalmente lista para pintar. Si no existe (navegadores muy viejos)
+    // usamos el load event como fallback.
+    const waitReady = () => {
+      if (typeof img.decode === 'function') {
+        return img.decode();
+      }
+      return new Promise((resolve, reject) => {
+        if (img.complete && img.naturalWidth > 0) return resolve();
+        img.addEventListener('load',  () => resolve(), { once: true });
+        img.addEventListener('error', () => reject(),  { once: true });
+      });
+    };
+
+    // Reservar altura mínima por si tarda — evita que el masonry colapse
+    if (!(img.complete && img.naturalWidth > 0)) {
+      cell.style.minHeight = '180px';
     }
 
-    // Reservar altura para que la celda no desaparezca antes de cargar
-    cell.style.minHeight = '180px';
-
-    let retried = false;
-    img.addEventListener('load', onLoaded, { once: true });
-    img.addEventListener('error', function onErr() {
-      if (!retried) {
-        retried = true;
-        // Reintento con cache-buster
-        const orig = img.getAttribute('src');
-        img.src = orig + (orig.includes('?') ? '&' : '?') + 'r=' + Date.now();
-        img.addEventListener('load', onLoaded, { once: true });
-        img.addEventListener('error', () => {
-          // Fallback final: dejar la celda con caption + fondo
-          img.style.display = 'none';
-          cell.style.background = 'var(--cream-mid)';
-          cell.style.minHeight = '160px';
-          const cap = cell.querySelector('.gphoto-caption');
-          if (cap) {
-            cap.style.color = 'var(--text-mid)';
-            cap.style.background = 'rgba(255,255,255,0.7)';
-            cap.style.textShadow = 'none';
-          }
-        }, { once: true });
-      }
-    }, { once: true });
+    waitReady().then(reveal).catch(() => {
+      // Reintento con cache-buster
+      const orig = img.getAttribute('src');
+      img.src = orig + (orig.includes('?') ? '&' : '?') + 'r=' + Date.now();
+      waitReady().then(reveal).catch(() => {
+        // Fallback final
+        img.style.display = 'none';
+        cell.style.background = 'var(--cream-mid)';
+        cell.style.minHeight = '160px';
+        const cap = cell.querySelector('.gphoto-caption');
+        if (cap) {
+          cap.style.color = 'var(--text-mid)';
+          cap.style.background = 'rgba(255,255,255,0.7)';
+          cap.style.textShadow = 'none';
+        }
+      });
+    });
   };
 
   // Codifica caracteres no-ASCII (ej. ñ en "montaña.jpeg") porque iOS Safari
@@ -2044,12 +2054,18 @@ function buildGallery() {
     attachLoadHandler(cell);
   });
 
-  // Observer para revelar fotos al hacer scroll (sólo una vez por foto)
+  // Observer para revelar fotos al hacer scroll.
+  // Aplicamos will-change SOLO durante la animación (≈1s) y luego lo
+  // liberamos. Esto evita que iOS Safari mantenga capas GPU permanentes
+  // que descarta agresivamente (causa de imágenes que desaparecen en móvil).
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
       if (e.isIntersecting) {
-        e.target.classList.add('in');
-        obs.unobserve(e.target);
+        const el = e.target;
+        el.style.willChange = 'opacity, transform';
+        el.classList.add('in');
+        setTimeout(() => { el.style.willChange = 'auto'; }, 1100);
+        obs.unobserve(el);
       }
     });
   }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });

@@ -430,11 +430,11 @@
       }
       .hero-date .hd-dot { display: none; }
       .hero-date .hd-part { display: block; }
-      .hero-venue { margin-top: 30px; }
+      .hero-venue { margin-top: 18px; }
       .scroll-cue { bottom: 22px; }
     }
     .hero-venue {
-      margin-top: 32px; font-size: 11px;
+      margin-top: 50px; font-size: 11px;
       letter-spacing: 5px; text-transform: uppercase;
       color: var(--sage); font-weight: 500;
     }
@@ -1652,7 +1652,16 @@
           Por favor, confirma tu asistencia antes del <strong>1 de Septiembre de 2026</strong>. Nos ayuda muchísimo para organizar bien el día.
         </p>
 
-        <div id="rsvpForm" class="fi delay-3" style="margin-top:44px;">
+        <form id="rsvpForm" class="fi delay-3" style="margin-top:44px;"
+              action="https://api.web3forms.com/submit" method="POST"
+              onsubmit="event.preventDefault(); sendRSVP();">
+
+          <!-- Campos requeridos / recomendados por Web3Forms -->
+          <input type="hidden" name="access_key" value="098461d4-4095-4230-b15d-7b22fbe7758a">
+          <input type="hidden" name="from_name"  value="Invitación Boda — Marc & Denisse">
+          <input type="hidden" name="subject"    id="hidden-subject" value="RSVP Boda">
+          <!-- Honeypot anti-bot: si un bot lo rellena, Web3Forms descarta -->
+          <input type="checkbox" name="botcheck" style="display:none;" tabindex="-1" autocomplete="off">
 
           <div class="form-group">
             <label class="form-lbl">¿Asistirás a la boda?</label>
@@ -1670,17 +1679,17 @@
 
           <div class="form-group">
             <label class="form-lbl" for="inp-nombre">Tu nombre completo</label>
-            <input type="text" class="form-input" id="inp-nombre" placeholder="Nombre y apellido">
+            <input type="text" class="form-input" id="inp-nombre" name="nombre" placeholder="Nombre y apellido">
           </div>
 
           <div class="form-group" id="grp-personas" style="display:none;">
             <label class="form-lbl" for="inp-personas">¿Cuántas personas confirmáis?</label>
-            <select class="form-select" id="inp-personas"></select>
+            <select class="form-select" id="inp-personas" name="personas"></select>
           </div>
 
           <div class="form-group" id="grp-quien-no" style="display:none;">
             <label class="form-lbl" for="inp-quien-no">¿Quién no podrá venir?</label>
-            <input type="text" class="form-input" id="inp-quien-no" placeholder="Ej: Andrés y Julieth no podrán asistir">
+            <input type="text" class="form-input" id="inp-quien-no" name="quienNoViene" placeholder="Ej: Andrés y Julieth no podrán asistir">
             <p style="font-size:11px; color:var(--text-light); margin-top:8px; line-height:1.5;">
               Indícanos los nombres para gestionarlo bien con Mas Llombart.
             </p>
@@ -1688,7 +1697,7 @@
 
           <div class="form-group" id="grp-bus" style="display:none;">
             <label class="form-lbl" for="inp-bus" id="lbl-bus">¿Necesitáis plaza en el autocar?</label>
-            <select class="form-select" id="inp-bus">
+            <select class="form-select" id="inp-bus" name="autocar">
               <option value="No" id="opt-bus-no">No, venimos en coche</option>
               <option value="Sí" id="opt-bus-yes">Sí, queremos autocar</option>
             </select>
@@ -1696,21 +1705,21 @@
 
           <div class="form-group" id="grp-alergias" style="display:none;">
             <label class="form-lbl" for="inp-alergias">Alergias o intolerancias alimentarias</label>
-            <input type="text" class="form-input" id="inp-alergias" placeholder="Ninguna / celiaquía / vegetariano...">
+            <input type="text" class="form-input" id="inp-alergias" name="alergias" placeholder="Ninguna / celiaquía / vegetariano...">
           </div>
 
           <div class="form-group" id="grp-msg" style="display:none;">
             <label class="form-lbl" for="inp-msg">Un mensaje para los novios (opcional)</label>
-            <textarea class="form-textarea" id="inp-msg" placeholder="¡Algo bonito para Marc y Denisse!"></textarea>
+            <textarea class="form-textarea" id="inp-msg" name="mensaje" placeholder="¡Algo bonito para Marc y Denisse!"></textarea>
           </div>
 
           <div class="form-group" id="grp-razon" style="display:none;">
             <label class="form-lbl" for="inp-razon">¿Quieres dejarnos unas palabras?</label>
-            <textarea class="form-textarea" id="inp-razon" placeholder="Te echaremos de menos..."></textarea>
+            <textarea class="form-textarea" id="inp-razon" name="razonAusencia" placeholder="Te echaremos de menos..."></textarea>
           </div>
 
-          <button class="btn-send" id="btnSend" onclick="sendRSVP()">Confirmar asistencia</button>
-        </div>
+          <button type="submit" class="btn-send" id="btnSend">Confirmar asistencia</button>
+        </form>
 
         <div class="rsvp-success" id="rsvpSuccess">
           <span class="success-icon" id="successIcon">🌿</span>
@@ -2129,42 +2138,88 @@ async function sendRSVP() {
   btn.disabled = true;
   btn.textContent = 'Enviando…';
 
+  // Calculamos los campos derivados (no van directamente como input)
   const personasCount = attendance === 'yes' ? (document.getElementById('inp-personas').value || '1') : '0';
   const reservadas    = guest ? guest.asientos : null;
+  const quienNoVieneRaw = document.getElementById('inp-quien-no').value.trim();
   const quienNoViene  = (
     attendance === 'yes' &&
     reservadas !== null &&
     parseInt(personasCount,10) < reservadas
-  ) ? document.getElementById('inp-quien-no').value.trim() : '';
+  ) ? quienNoVieneRaw : '';
 
-  const payload = {
-    timestamp:   new Date().toISOString(),
-    invitadoId:  guestId || 'directo',
-    nombre,
-    asistencia:  attendance === 'yes' ? 'Sí' : 'No',
-    plazasReservadas: reservadas !== null ? String(reservadas) : 'N/A',
-    personas:    personasCount,
-    quienNoViene: quienNoViene || (attendance === 'yes' ? '— vienen todos —' : 'N/A'),
-    bus:         attendance === 'yes' ? document.getElementById('inp-bus').value : 'N/A',
-    alergias:    attendance === 'yes' ? document.getElementById('inp-alergias').value : '',
-    mensaje:     attendance === 'yes'
-                   ? document.getElementById('inp-msg').value
-                   : document.getElementById('inp-razon').value
-  };
+  // Construir el FormData a partir del <form> (recoge inputs con name=)
+  // y añadir los campos calculados.
+  const form = document.getElementById('rsvpForm');
+  const formData = new FormData(form);
+
+  // Sobrescribimos/añadimos los valores procesados (los <select> hidden
+  // pueden contener valores que no queremos enviar tal cual)
+  formData.set('subject',   `RSVP Boda — ${nombre} (${attendance === 'yes' ? 'Sí' : 'No'})`);
+  formData.set('asistencia',       attendance === 'yes' ? 'Sí' : 'No');
+  formData.set('invitadoId',       guestId || 'directo');
+  formData.set('plazasReservadas', reservadas !== null ? String(reservadas) : 'N/A');
+  formData.set('personas',         personasCount);
+  formData.set('quienNoViene',     quienNoViene || (attendance === 'yes' ? '— vienen todos —' : 'N/A'));
+  formData.set('timestamp',        new Date().toISOString());
+  if (attendance !== 'yes') {
+    // Si NO asiste, vaciamos los campos que solo aplican a "Sí"
+    formData.set('autocar',  'N/A');
+    formData.set('alergias', '');
+    formData.set('mensaje',  document.getElementById('inp-razon').value || '');
+  } else {
+    formData.delete('razonAusencia');
+  }
+
+  // Construimos un payload plano para localStorage y mailto
+  const payload = {};
+  for (const [k, v] of formData.entries()) {
+    if (k === 'access_key' || k === 'botcheck' || k === 'from_name') continue;
+    payload[k] = v;
+  }
+
+  // Respaldo en localStorage (no perdemos la respuesta si la API falla)
+  try {
+    const backups = JSON.parse(localStorage.getItem('rsvp_backups') || '[]');
+    backups.push(payload);
+    localStorage.setItem('rsvp_backups', JSON.stringify(backups));
+  } catch (e) { /* ignorar */ }
+
+  // Fallback mailto: por si la API falla
+  const mailBody = Object.entries(payload).map(([k,v]) => `${k}: ${v}`).join('\n');
+  const mailtoLink = `mailto:mgomeznogues@gmail.com?subject=${encodeURIComponent('RSVP Boda — ' + nombre + ' (' + (attendance === 'yes' ? 'Sí' : 'No') + ')')}&body=${encodeURIComponent(mailBody)}`;
+
+  let data = null;
+  let httpStatus = null;
+  let networkError = null;
 
   try {
+    // Web3Forms recomienda multipart/form-data o x-www-form-urlencoded
+    // (lo que envía un <form> normal). NO ponemos 'Content-Type' manual:
+    // dejamos que el navegador lo configure con el boundary correcto.
     const res = await fetch('https://api.web3forms.com/submit', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body:    JSON.stringify({
-        access_key: W3F_KEY,
-        subject:   `RSVP Boda — ${payload.nombre} (${payload.asistencia})`,
-        ...payload
-      })
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      body: formData
     });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message);
+    httpStatus = res.status;
+    try { data = await res.json(); }
+    catch (jsonErr) { data = { success: false, message: 'Respuesta no-JSON del servidor (HTTP ' + res.status + ')' }; }
+  } catch (networkErr) {
+    networkError = networkErr;
+  }
 
+  // Log detallado en consola para diagnóstico
+  console.group('RSVP submission');
+  console.log('Payload:',     payload);
+  console.log('HTTP status:', httpStatus);
+  console.log('Response:',    data);
+  console.log('Network err:', networkError);
+  console.groupEnd();
+
+  const ok = data && data.success === true;
+
+  if (ok) {
     document.getElementById('rsvpForm').style.display = 'none';
     const s = document.getElementById('rsvpSuccess');
     s.style.display = 'block';
@@ -2180,12 +2235,32 @@ async function sendRSVP() {
       document.getElementById('successBody').innerHTML =
         `Gracias por avisarnos, <strong>${nombre}</strong>. Os echaremos muchísimo de menos.`;
     }
+  } else {
+    // Mostrar pantalla de error con fallback por email + detalle técnico
+    document.getElementById('rsvpForm').style.display = 'none';
+    const s = document.getElementById('rsvpSuccess');
+    s.style.display = 'block';
+    document.getElementById('successIcon').textContent = '✉️';
+    document.getElementById('successTitle').innerHTML = 'Casi <em>lo tenemos</em>';
 
-  } catch (err) {
-    console.error(err);
-    btn.disabled = false;
-    btn.textContent = 'Reintentar';
-    alert('Hubo un problema al enviar. Por favor, inténtalo de nuevo.');
+    const errorDetail = networkError
+      ? `Error de red: ${networkError.message}`
+      : `${data && data.message ? data.message : 'sin mensaje'} (HTTP ${httpStatus})`;
+
+    document.getElementById('successBody').innerHTML = `
+      <p>Hemos guardado tu respuesta, pero no hemos podido enviárnosla automáticamente.</p>
+      <p style="margin-top:14px;">Por favor, pulsa el botón de abajo para enviárnosla por email directamente — solo te llevará un toque.</p>
+      <a href="${mailtoLink}"
+         style="display:inline-block; margin-top:22px; padding:14px 26px;
+                background:var(--sage-dark); color:var(--cream); text-decoration:none;
+                border-radius:4px; font-family:var(--sans); font-size:11px;
+                letter-spacing:3px; text-transform:uppercase; font-weight:500;">
+        Enviar por email
+      </a>
+      <p style="margin-top:24px; font-size:11px; color:var(--text-light);">
+        Detalle técnico: ${errorDetail}
+      </p>
+    `;
   }
 }
 
